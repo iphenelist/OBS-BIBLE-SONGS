@@ -7,6 +7,46 @@
 <style>
   :root {
     color-scheme: dark;
+    --bg-page: #14161c;
+    --bg-topbar: #1a1c23;
+    --border: #2c3038;
+    --text: #e8e8ec;
+    --text-muted: #9aa0aa;
+    --panel-bg: #1e2129;
+    --panel-header-bg: #191b21;
+    --input-bg: #0f1116;
+    --input-border: #383d47;
+    --card-bg: #0f1116;
+    --hover-bg: #262a33;
+    --selected-bg: #2b2f38;
+    --selected-bg-accent: #262a1a;
+    --muted-text-2: #666;
+    --accent: #f1c40f;
+    --accent-hover: #f7d341;
+    --accent-text: #14161c;
+    --success: #2ecc71;
+    --success-hover: #45db85;
+    --success-text: #0e1a12;
+    --danger: #e74c3c;
+    --danger-hover: #f2604f;
+  }
+
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg-page: #f4f5f7;
+    --bg-topbar: #ffffff;
+    --border: #dcdfe4;
+    --text: #1b1d22;
+    --text-muted: #6b7280;
+    --panel-bg: #ffffff;
+    --panel-header-bg: #f0f1f3;
+    --input-bg: #ffffff;
+    --input-border: #ccd0d6;
+    --card-bg: #f7f8fa;
+    --hover-bg: #eef0f3;
+    --selected-bg: #fdf3d3;
+    --selected-bg-accent: #fdf3d3;
+    --muted-text-2: #9aa0aa;
   }
 
   * { box-sizing: border-box; }
@@ -14,269 +54,565 @@
   body {
     margin: 0;
     font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-    background: #14161c;
-    color: #e8e8ec;
-    padding: 24px;
+    background: var(--bg-page);
+    color: var(--text);
   }
 
-  h1 {
-    font-size: 1.4rem;
-    margin: 0 0 20px 0;
+  /* ---------- Top bar ---------- */
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 18px;
+    background: var(--bg-topbar);
+    border-bottom: 1px solid var(--border);
   }
 
-  .grid {
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .topbar h1 {
+    font-size: 1.05rem;
+    margin: 0;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .theme-toggle {
+    background: var(--input-bg);
+    color: var(--text);
+    border: 1px solid var(--input-border);
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+  .status {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .status.connected { color: var(--success); }
+  .status.disconnected { color: var(--danger); }
+
+  /* ---------- Layout ---------- */
+
+  .layout {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    max-width: 1200px;
-    margin: 0 auto;
+    grid-template-columns: 280px 1fr 340px;
+    gap: 14px;
+    padding: 14px;
+    align-items: start;
   }
 
-  @media (max-width: 900px) {
-    .grid { grid-template-columns: 1fr; }
+  @media (max-width: 1100px) {
+    .layout { grid-template-columns: 1fr; }
   }
 
-  .card {
-    background: #1e2129;
-    border: 1px solid #2c3038;
-    border-radius: 10px;
-    padding: 18px 20px;
+  .panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
-  .card h2 {
-    margin-top: 0;
-    font-size: 1.1rem;
-    color: #f1c40f;
+  .panel-header {
+    padding: 10px 14px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: var(--panel-header-bg);
+    border-bottom: 1px solid var(--border);
   }
+
+  .panel-body {
+    padding: 12px 14px;
+  }
+
+  /* ---------- Schedule ---------- */
+
+  .schedule-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .schedule-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 7px 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-bottom: 4px;
+  }
+
+  .schedule-list li:hover { background: var(--hover-bg); }
+  .schedule-list li.selected { background: var(--selected-bg); border: 1px solid var(--accent); }
+
+  .schedule-list .remove-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0 4px;
+  }
+
+  .schedule-list .remove-btn:hover { color: var(--danger); }
+
+  .schedule-empty {
+    font-size: 0.8rem;
+    color: var(--muted-text-2);
+    padding: 6px 2px;
+  }
+
+  .add-to-schedule {
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  /* ---------- Library tabs ---------- */
+
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tabs button {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    padding: 9px 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+
+  .tabs button.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .tab-content { display: none; padding: 12px 14px; }
+  .tab-content.active { display: block; }
 
   label {
     display: block;
-    font-size: 0.8rem;
-    color: #9aa0aa;
+    font-size: 0.75rem;
+    color: var(--text-muted);
     margin-bottom: 4px;
   }
 
   input, select {
     width: 100%;
-    padding: 8px 10px;
+    padding: 7px 9px;
     border-radius: 6px;
-    border: 1px solid #383d47;
-    background: #0f1116;
-    color: #e8e8ec;
-    font-size: 0.95rem;
-    margin-bottom: 12px;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text);
+    font-size: 0.9rem;
+    margin-bottom: 10px;
   }
 
-  .row {
-    display: flex;
-    gap: 10px;
-  }
-
-  .row > div {
-    flex: 1;
-  }
+  .row { display: flex; gap: 8px; }
+  .row > div { flex: 1; }
 
   button {
     cursor: pointer;
     border: none;
     border-radius: 6px;
-    padding: 10px 16px;
-    font-size: 0.95rem;
+    padding: 9px 14px;
+    font-size: 0.88rem;
     font-weight: 600;
   }
 
-  .btn-primary {
-    background: #f1c40f;
-    color: #14161c;
-  }
-
-  .btn-primary:hover { background: #f7d341; }
+  .btn-primary { background: var(--accent); color: var(--accent-text); }
+  .btn-primary:hover { background: var(--accent-hover); }
 
   .btn-nav {
-    background: #0f1116;
-    color: #e8e8ec;
-    border: 1px solid #383d47;
+    background: var(--input-bg);
+    color: var(--text);
+    border: 1px solid var(--input-border);
   }
+  .btn-nav:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 
-  .btn-nav:hover:not(:disabled) { border-color: #f1c40f; color: #f1c40f; }
-
-  .btn-nav:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .btn-push {
-    background: #2ecc71;
-    color: #0e1a12;
+  .btn-go-live {
+    background: var(--success);
+    color: var(--success-text);
     width: 100%;
-    margin-top: 10px;
+    padding: 14px;
+    font-size: 1rem;
   }
+  .btn-go-live:hover { background: var(--success-hover); }
 
-  .btn-push:hover { background: #45db85; }
-
-  .btn-hide {
-    background: #e74c3c;
+  .btn-black {
+    background: var(--danger);
     color: #ffffff;
     width: 100%;
-    padding: 16px;
-    font-size: 1.1rem;
-  }
-
-  .btn-hide:hover { background: #f2604f; }
-
-  .preview {
-    margin-top: 14px;
     padding: 14px;
-    border-radius: 8px;
-    background: #0f1116;
-    border: 1px solid #2c3038;
-    min-height: 40px;
-  }
-
-  .preview .en {
-    font-weight: 600;
-    margin-bottom: 6px;
-  }
-
-  .preview .sw {
-    color: #f1c40f;
-    font-style: italic;
-  }
-
-  .preview .ref {
+    font-size: 1rem;
     margin-top: 8px;
-    font-size: 0.75rem;
-    color: #777;
-    text-align: right;
-    text-transform: uppercase;
+  }
+  .btn-black:hover { background: var(--danger-hover); }
+
+  .song-list {
+    list-style: none;
+    margin: 8px 0 0 0;
+    padding: 0;
+    max-height: 260px;
+    overflow-y: auto;
+    border-top: 1px solid var(--border);
   }
 
-  .status {
-    font-size: 0.8rem;
-    margin-bottom: 16px;
-    color: #9aa0aa;
+  .song-list li {
+    padding: 7px 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
   }
 
-  .status.connected { color: #2ecc71; }
-  .status.disconnected { color: #e74c3c; }
+  .song-list li:hover { color: var(--accent); }
+  .song-list li.active { color: var(--accent); font-weight: 600; }
 
-  .stanzas {
+  /* ---------- Preview column ---------- */
+
+  .preview-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .slide-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-top: 14px;
-    max-height: 420px;
+    gap: 8px;
+    max-height: calc(100vh - 190px);
     overflow-y: auto;
+    padding-right: 4px;
   }
 
-  .stanza-card {
-    background: #0f1116;
-    border: 1px solid #2c3038;
+  .slide-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
     border-radius: 8px;
     padding: 10px 12px;
     cursor: pointer;
     transition: border-color 0.15s ease, background 0.15s ease;
   }
 
-  .stanza-card:hover {
-    border-color: #f1c40f;
-    background: #16181f;
+  .slide-card:hover { border-color: var(--accent); }
+
+  .slide-card.selected {
+    border-color: var(--accent);
+    background: var(--selected-bg-accent);
   }
 
-  .stanza-card .stanza-label {
-    font-size: 0.7rem;
-    color: #777;
+  .slide-label {
+    font-size: 0.68rem;
+    color: var(--muted-text-2);
     text-transform: uppercase;
     margin-bottom: 4px;
   }
 
-  .stanza-card .stanza-text {
+  .slide-primary {
+    font-weight: 600;
     white-space: pre-line;
-    font-size: 0.9rem;
-    line-height: 1.4;
+    font-size: 0.92rem;
+    margin-bottom: 4px;
   }
 
-  .lang-toggle {
+  .slide-secondary {
+    color: var(--accent);
+    font-style: italic;
+    font-size: 0.85rem;
+    white-space: pre-line;
+  }
+
+  .empty-state {
+    color: var(--muted-text-2);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 30px 10px;
+  }
+
+  /* ---------- Live monitor ---------- */
+
+  .live-monitor {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #05060a;
+    background-size: cover;
+    background-position: center;
     display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
+    align-items: center;
+    justify-content: center;
   }
 
-  .lang-toggle button {
-    flex: 1;
-    background: #0f1116;
-    color: #9aa0aa;
-    border: 1px solid #383d47;
+  .live-monitor .tint {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    opacity: 0;
   }
 
-  .lang-toggle button.active {
-    background: #f1c40f;
-    color: #14161c;
-    border-color: #f1c40f;
+  .live-monitor.has-bg .tint { opacity: 1; }
+
+  .live-monitor .card {
+    position: relative;
+    z-index: 1;
+    max-width: 86%;
+    padding: 10px 14px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, rgba(10, 15, 25, 0.72), rgba(10, 15, 25, 0.55));
+    border-left: 3px solid #f1c40f;
+    display: none;
   }
 
-  .full-width {
-    grid-column: 1 / -1;
+  .live-monitor .card.visible { display: block; }
+
+  .live-monitor .primary {
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.82rem;
+    line-height: 1.3;
+    margin: 0 0 4px 0;
   }
+
+  .live-monitor .secondary {
+    color: #f1c40f;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 0.68rem;
+    line-height: 1.3;
+    margin: 0 0 4px 0;
+  }
+
+  .live-monitor .reference {
+    color: #c9c9c9;
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    text-align: right;
+    margin: 0;
+  }
+
+  .bg-gallery {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-top: 10px;
+    max-height: 240px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  .bg-thumb {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background-size: cover;
+    background-position: center;
+    border-radius: 4px;
+    border: 2px solid transparent;
+    cursor: pointer;
+  }
+
+  .bg-thumb:hover { border-color: var(--accent); }
+  .bg-thumb.active { border-color: var(--success); }
+
+  .bg-delete-btn {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--danger);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .bg-delete-btn:hover { background: var(--danger-hover); }
+
+  .bg-clear-thumb {
+    aspect-ratio: 16 / 9;
+    border-radius: 4px;
+    border: 2px dashed var(--input-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .bg-clear-thumb:hover { border-color: var(--danger); color: var(--danger); }
+
+  .upload-row {
+    margin-top: 10px;
+  }
+
+  .bg-status {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  .panel-spaced { margin-bottom: 14px; }
+  .flex-2 { flex: 2; }
+  .full-width { width: 100%; }
 </style>
 </head>
 <body>
-  <h1>OBS Bible &amp; Songs — Operator Control Panel</h1>
-  <div id="status" class="status disconnected">Connecting to overlay…</div>
+  <div class="topbar">
+    <h1>OBS Bible &amp; Songs — Live Control</h1>
+    <div class="topbar-right">
+      <div id="status" class="status disconnected">Connecting to overlay…</div>
+      <button type="button" class="theme-toggle" id="themeToggleBtn">☀️ Light Mode</button>
+    </div>
+  </div>
 
-  <div class="grid">
-    <div class="card">
-      <h2>Bible Search</h2>
-      <div class="row">
-        <div>
+  <div class="layout">
+    <!-- ---------- LEFT: Schedule + Library ---------- -->
+    <div>
+      <div class="panel panel-spaced">
+        <div class="panel-header">Schedule</div>
+        <div class="panel-body">
+          <ul class="schedule-list" id="scheduleList">
+            <li class="schedule-empty">Nothing queued yet. Load a song or verse, then click "Add to Schedule".</li>
+          </ul>
+          <button type="button" class="btn-nav add-to-schedule" id="addToScheduleBtn">+ Add Current to Schedule</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">Library</div>
+        <div class="tabs">
+          <button type="button" class="tab-btn active" data-tab="bible">Bible</button>
+          <button type="button" class="tab-btn" data-tab="en">Songs EN</button>
+          <button type="button" class="tab-btn" data-tab="sw">Songs SW</button>
+        </div>
+
+        <div class="tab-content active" id="tab-bible">
           <label for="book">Book</label>
-          <select id="book">
-            <option value="">Loading books…</option>
-          </select>
+          <select id="book"><option value="">Loading books…</option></select>
+          <div class="row">
+            <div>
+              <label for="chapter">Chapter</label>
+              <input id="chapter" type="number" min="1" placeholder="3" />
+            </div>
+            <div>
+              <label for="verse">Jump to verse</label>
+              <input id="verse" type="number" min="1" placeholder="16" />
+            </div>
+          </div>
+          <div class="row">
+            <button type="button" class="btn-nav" id="biblePrevBtn" title="Previous verse">&larr; Prev</button>
+            <button type="button" class="btn-nav" id="bibleNextBtn" title="Next verse">Next &rarr;</button>
+          </div>
         </div>
-        <div>
-          <label for="chapter">Chapter</label>
-          <input id="chapter" type="number" min="1" placeholder="3" />
-        </div>
-        <div>
-          <label for="verse">Verse</label>
-          <input id="verse" type="number" min="1" placeholder="16" />
-        </div>
-      </div>
-      <div class="row">
-        <button type="button" class="btn-primary" id="bibleSearchBtn">Search</button>
-        <button type="button" class="btn-nav" id="biblePrevBtn" title="Previous verse">&larr; Prev</button>
-        <button type="button" class="btn-nav" id="bibleNextBtn" title="Next verse">Next &rarr;</button>
-      </div>
 
-      <div class="preview" id="biblePreview">
-        <div class="en" id="biblePreviewPrimary">—</div>
-        <div class="sw" id="biblePreviewSecondary"></div>
-        <div class="ref" id="biblePreviewRef"></div>
+        <div class="tab-content" id="tab-en">
+          <label for="songSearchEn">Search</label>
+          <input id="songSearchEn" type="text" placeholder="Filter titles…" />
+          <ul class="song-list" id="songListEn"></ul>
+        </div>
+
+        <div class="tab-content" id="tab-sw">
+          <label for="songSearchSw">Search</label>
+          <input id="songSearchSw" type="text" placeholder="Filter titles…" />
+          <ul class="song-list" id="songListSw"></ul>
+        </div>
       </div>
-      <button type="button" class="btn-push" id="biblePushBtn">Push Live</button>
     </div>
 
-    <div class="card">
-      <h2>Songs</h2>
-      <div class="lang-toggle">
-        <button type="button" id="langEnBtn" class="active">English</button>
-        <button type="button" id="langSwBtn">Swahili</button>
+    <!-- ---------- MIDDLE: Preview ---------- -->
+    <div class="panel">
+      <div class="panel-header">Preview</div>
+      <div class="panel-body">
+        <div class="preview-title" id="previewTitle">Nothing loaded</div>
+        <div class="slide-list" id="slideList">
+          <div class="empty-state">Search a Bible verse or pick a song to preview its slides here.</div>
+        </div>
       </div>
-      <label for="songSelect">Song</label>
-      <select id="songSelect">
-        <option value="">Loading songs…</option>
-      </select>
-
-      <div class="stanzas" id="stanzaList"></div>
     </div>
 
-    <div class="card full-width">
-      <button type="button" class="btn-hide" id="hideBtn">Clear Screen / Hide Overlay</button>
+    <!-- ---------- RIGHT: Live + Backgrounds ---------- -->
+    <div>
+      <div class="panel panel-spaced">
+        <div class="panel-header">Live</div>
+        <div class="panel-body">
+          <div class="live-monitor" id="liveMonitor">
+            <div class="tint"></div>
+            <div class="card" id="liveCard">
+              <p class="primary" id="livePrimary"></p>
+              <p class="secondary" id="liveSecondary"></p>
+              <p class="reference" id="liveReference"></p>
+            </div>
+          </div>
+          <button type="button" class="btn-go-live" id="goLiveBtn">Go Live</button>
+          <button type="button" class="btn-black" id="blackBtn">Black / Clear Screen</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">Background</div>
+        <div class="panel-body">
+          <div class="bg-gallery" id="bgGallery">
+            <div class="bg-clear-thumb" id="bgClearThumb">None</div>
+          </div>
+          <div class="upload-row">
+            <label for="bgFile">Upload new background</label>
+            <input id="bgFile" type="file" accept="image/*" />
+            <button type="button" class="btn-nav full-width" id="bgUploadBtn">Upload &amp; Add</button>
+          </div>
+          <div class="bg-status" id="bgStatus"></div>
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
+    // ---------- Theme ----------
+
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('ew-theme', theme);
+      themeToggleBtn.textContent = theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode';
+    }
+
+    applyTheme(localStorage.getItem('ew-theme') || 'dark');
+
+    themeToggleBtn.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+      applyTheme(current === 'light' ? 'dark' : 'light');
+    });
+
+    // ---------- WebSocket ----------
+
     const statusEl = document.getElementById('status');
     let ws;
 
@@ -301,9 +637,102 @@
       }
     }
 
-    // ---------- Bible ----------
+    // ---------- Tabs ----------
 
-    let currentVerse = null;
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach((c) => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+      });
+    });
+
+    // ---------- Shared preview / live state ----------
+
+    let slides = [];          // current loaded item's slides
+    let selectedIndex = -1;   // index into slides[] currently highlighted
+    let isLive = false;       // whether the selection is being auto-pushed live
+    let currentItem = null;   // descriptor for "Add to Schedule" { label, type, payload }
+
+    const previewTitleEl = document.getElementById('previewTitle');
+    const slideListEl = document.getElementById('slideList');
+
+    function renderSlides(title) {
+      previewTitleEl.textContent = title || 'Nothing loaded';
+      slideListEl.innerHTML = '';
+
+      if (slides.length === 0) {
+        slideListEl.innerHTML = '<div class="empty-state">No slides.</div>';
+        return;
+      }
+
+      slides.forEach((slide, idx) => {
+        const card = document.createElement('div');
+        card.className = 'slide-card' + (idx === selectedIndex ? ' selected' : '');
+
+        const label = document.createElement('div');
+        label.className = 'slide-label';
+        label.textContent = slide.label;
+
+        const primary = document.createElement('div');
+        primary.className = 'slide-primary';
+        primary.textContent = slide.primary;
+
+        card.appendChild(label);
+        card.appendChild(primary);
+
+        if (slide.secondary) {
+          const secondary = document.createElement('div');
+          secondary.className = 'slide-secondary';
+          secondary.textContent = slide.secondary;
+          card.appendChild(secondary);
+        }
+
+        card.addEventListener('click', () => selectSlide(idx));
+        slideListEl.appendChild(card);
+      });
+    }
+
+    let buildScheduleItem = null; // (idx) => { label, type, payload }, set per loaded item
+
+    function selectSlide(idx) {
+      selectedIndex = idx;
+      renderSlides(previewTitleEl.textContent);
+      if (buildScheduleItem) currentItem = buildScheduleItem(idx);
+      if (isLive) pushLive();
+    }
+
+    // ---------- Live monitor + Go Live / Black ----------
+
+    const liveMonitor = document.getElementById('liveMonitor');
+    const liveCard = document.getElementById('liveCard');
+    const livePrimaryEl = document.getElementById('livePrimary');
+    const liveSecondaryEl = document.getElementById('liveSecondary');
+    const liveReferenceEl = document.getElementById('liveReference');
+
+    function pushLive() {
+      const slide = slides[selectedIndex];
+      if (!slide) return;
+
+      send({ action: 'SHOW', primary: slide.primary, secondary: slide.secondary || '', reference: slide.reference || '' });
+      isLive = true;
+
+      livePrimaryEl.textContent = slide.primary;
+      liveSecondaryEl.textContent = slide.secondary || '';
+      liveReferenceEl.textContent = slide.reference || '';
+      liveCard.classList.add('visible');
+    }
+
+    document.getElementById('goLiveBtn').addEventListener('click', pushLive);
+
+    document.getElementById('blackBtn').addEventListener('click', () => {
+      isLive = false;
+      send({ action: 'HIDE' });
+      liveCard.classList.remove('visible');
+    });
+
+    // ---------- Bible tab ----------
 
     async function loadBookList() {
       const bookSelect = document.getElementById('book');
@@ -320,146 +749,304 @@
     }
     loadBookList();
 
-    async function searchVerse() {
+    let bibleChapterMeta = null; // { book, book_swahili, chapter }
+
+    async function loadChapter() {
       const book = document.getElementById('book').value.trim();
       const chapter = document.getElementById('chapter').value.trim();
-      const verse = document.getElementById('verse').value.trim();
-      if (!book || !chapter || !verse) return;
+      if (!book || !chapter) return;
 
-      const res = await fetch(`/api/bible?book=${encodeURIComponent(book)}&chapter=${chapter}&verse=${verse}`);
+      const res = await fetch(`/api/bible/chapter?book=${encodeURIComponent(book)}&chapter=${chapter}`);
       const data = await res.json();
 
       if (!res.ok) {
-        document.getElementById('biblePreviewPrimary').textContent = data.error || 'Not found';
-        document.getElementById('biblePreviewSecondary').textContent = '';
-        document.getElementById('biblePreviewRef').textContent = '';
-        currentVerse = null;
+        slides = [];
+        selectedIndex = -1;
+        bibleChapterMeta = null;
+        renderSlides(data.error || 'Not found');
+        currentItem = null;
         return;
       }
 
-      currentVerse = {
-        primary: data.swahili_text,
-        secondary: data.english_text,
-        reference: `${data.book_swahili.toUpperCase()} ${data.chapter}:${data.verse}`,
-      };
+      bibleChapterMeta = { book, book_swahili: data.book_swahili, chapter: data.chapter };
 
-      document.getElementById('biblePreviewPrimary').textContent = currentVerse.primary;
-      document.getElementById('biblePreviewSecondary').textContent = currentVerse.secondary;
-      document.getElementById('biblePreviewRef').textContent = currentVerse.reference;
+      slides = data.verses.map((v) => {
+        const reference = `${data.book_swahili.toUpperCase()} ${data.chapter}:${v.verse}`;
+        return { label: `Verse ${v.verse}`, primary: v.swahili_text, secondary: v.english_text, reference, verseNum: v.verse };
+      });
+
+      buildScheduleItem = (idx) => ({
+        label: slides[idx].reference,
+        type: 'bible',
+        payload: { book: bibleChapterMeta.book, chapter: bibleChapterMeta.chapter, verse: slides[idx].verseNum },
+      });
+
+      const verseInput = document.getElementById('verse');
+      const jumpTo = parseInt(verseInput.value, 10);
+      selectedIndex = slides.findIndex((s) => s.verseNum === jumpTo);
+      if (selectedIndex === -1) selectedIndex = 0;
+
+      renderSlides(`${data.book_swahili} ${data.chapter}`);
+      currentItem = buildScheduleItem(selectedIndex);
+
+      if (isLive) pushLive();
     }
 
-    let isBibleLive = false;
+    document.getElementById('book').addEventListener('change', loadChapter);
+    document.getElementById('chapter').addEventListener('change', loadChapter);
 
-    function pushLive() {
-      if (!currentVerse) return;
-      send({ action: 'SHOW', ...currentVerse });
-      isBibleLive = true;
-    }
-
-    document.getElementById('bibleSearchBtn').addEventListener('click', searchVerse);
-
-    document.getElementById('bibleNextBtn').addEventListener('click', async () => {
-      const verseInput = document.getElementById('verse');
-      const current = parseInt(verseInput.value, 10);
-      verseInput.value = (Number.isFinite(current) ? current : 0) + 1;
-      await searchVerse();
-      if (isBibleLive) pushLive();
+    document.getElementById('verse').addEventListener('change', () => {
+      const jumpTo = parseInt(document.getElementById('verse').value, 10);
+      const idx = slides.findIndex((s) => s.verseNum === jumpTo);
+      if (idx !== -1) selectSlide(idx);
     });
 
-    document.getElementById('biblePrevBtn').addEventListener('click', async () => {
-      const verseInput = document.getElementById('verse');
-      const current = parseInt(verseInput.value, 10);
-      if (!Number.isFinite(current) || current <= 1) return;
-      verseInput.value = current - 1;
-      await searchVerse();
-      if (isBibleLive) pushLive();
+    document.getElementById('bibleNextBtn').addEventListener('click', () => {
+      if (selectedIndex < slides.length - 1) {
+        selectedIndex += 1;
+        document.getElementById('verse').value = slides[selectedIndex].verseNum;
+        selectSlide(selectedIndex);
+      }
     });
 
-    document.getElementById('biblePushBtn').addEventListener('click', pushLive);
+    document.getElementById('biblePrevBtn').addEventListener('click', () => {
+      if (selectedIndex > 0) {
+        selectedIndex -= 1;
+        document.getElementById('verse').value = slides[selectedIndex].verseNum;
+        selectSlide(selectedIndex);
+      }
+    });
 
-    // ---------- Songs ----------
+    // ---------- Songs tabs (EN / SW) ----------
 
-    let lang = 'en';
-    const songSelect = document.getElementById('songSelect');
-    const stanzaList = document.getElementById('stanzaList');
-    const langEnBtn = document.getElementById('langEnBtn');
-    const langSwBtn = document.getElementById('langSwBtn');
-
-    async function loadSongList() {
-      songSelect.innerHTML = '<option value="">Loading songs…</option>';
-      stanzaList.innerHTML = '';
+    async function loadSongList(lang) {
+      const listEl = document.getElementById(lang === 'sw' ? 'songListSw' : 'songListEn');
       const res = await fetch(`/api/songs?lang=${lang}`);
       const songs = await res.json();
+      listEl.dataset.songs = JSON.stringify(songs);
+      renderSongList(lang, songs);
+    }
 
-      songSelect.innerHTML = '<option value="">Select a song…</option>';
+    function renderSongList(lang, songs) {
+      const listEl = document.getElementById(lang === 'sw' ? 'songListSw' : 'songListEn');
+      listEl.innerHTML = '';
       for (const song of songs) {
-        const opt = document.createElement('option');
-        opt.value = song.id;
-        opt.textContent = song.title;
-        songSelect.appendChild(opt);
+        const li = document.createElement('li');
+        li.textContent = song.title;
+        li.addEventListener('click', () => loadSong(lang, song.id, song.title, li));
+        listEl.appendChild(li);
       }
     }
 
-    langEnBtn.addEventListener('click', () => {
-      lang = 'en';
-      langEnBtn.classList.add('active');
-      langSwBtn.classList.remove('active');
-      loadSongList();
-    });
-
-    langSwBtn.addEventListener('click', () => {
-      lang = 'sw';
-      langSwBtn.classList.add('active');
-      langEnBtn.classList.remove('active');
-      loadSongList();
-    });
-
-    songSelect.addEventListener('change', async () => {
-      stanzaList.innerHTML = '';
-      const id = songSelect.value;
-      if (!id) return;
+    async function loadSong(lang, id, title, liEl) {
+      document.querySelectorAll(`#songList${lang === 'sw' ? 'Sw' : 'En'} li`).forEach((li) => li.classList.remove('active'));
+      if (liEl) liEl.classList.add('active');
 
       const res = await fetch(`/api/songs/${encodeURIComponent(id)}?lang=${lang}`);
       if (!res.ok) return;
       const data = await res.json();
 
       const stanzas = data.lyrics.split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean);
-
-      stanzas.forEach((stanza, idx) => {
-        const card = document.createElement('div');
-        card.className = 'stanza-card';
-
-        const label = document.createElement('div');
-        label.className = 'stanza-label';
-        label.textContent = `Stanza ${idx + 1}`;
-
-        const text = document.createElement('div');
-        text.className = 'stanza-text';
-        text.textContent = stanza;
-
-        card.appendChild(label);
-        card.appendChild(text);
-
-        card.addEventListener('click', () => {
-          send({
-            action: 'SHOW',
-            primary: stanza,
-            secondary: '',
-            reference: `${data.title.toUpperCase()} - STANZA ${idx + 1}`,
-          });
-        });
-
-        stanzaList.appendChild(card);
+      slides = stanzas.map((text, idx) => {
+        const isChorus = /^chorus\b/i.test(text);
+        const label = isChorus ? 'Chorus' : `Verse ${idx + 1}`;
+        return {
+          label,
+          primary: text.replace(/^chorus\s*/i, '').trim(),
+          secondary: '',
+          reference: `${data.title.toUpperCase()} - ${label.toUpperCase()}`,
+        };
       });
+      selectedIndex = slides.length ? 0 : -1;
+
+      buildScheduleItem = () => ({
+        label: data.title,
+        type: 'song',
+        payload: { lang, id, title: data.title },
+      });
+
+      renderSlides(data.title);
+      currentItem = buildScheduleItem();
+
+      if (isLive) pushLive();
+    }
+
+    document.getElementById('songSearchEn').addEventListener('input', (e) => {
+      const listEl = document.getElementById('songListEn');
+      const all = JSON.parse(listEl.dataset.songs || '[]');
+      const q = e.target.value.trim().toLowerCase();
+      renderSongList('en', all.filter((s) => s.title.toLowerCase().includes(q)));
     });
 
-    loadSongList();
+    document.getElementById('songSearchSw').addEventListener('input', (e) => {
+      const listEl = document.getElementById('songListSw');
+      const all = JSON.parse(listEl.dataset.songs || '[]');
+      const q = e.target.value.trim().toLowerCase();
+      renderSongList('sw', all.filter((s) => s.title.toLowerCase().includes(q)));
+    });
 
-    // ---------- Global hide ----------
+    loadSongList('en');
+    loadSongList('sw');
 
-    document.getElementById('hideBtn').addEventListener('click', () => {
-      isBibleLive = false;
-      send({ action: 'HIDE' });
+    // ---------- Schedule ----------
+
+    let schedule = [];
+    let scheduleSeq = 0;
+
+    const scheduleListEl = document.getElementById('scheduleList');
+
+    function renderSchedule() {
+      scheduleListEl.innerHTML = '';
+      if (schedule.length === 0) {
+        scheduleListEl.innerHTML = '<li class="schedule-empty">Nothing queued yet. Load a song or verse, then click "Add to Schedule".</li>';
+        return;
+      }
+      schedule.forEach((item) => {
+        const li = document.createElement('li');
+
+        const label = document.createElement('span');
+        label.textContent = item.label;
+        li.appendChild(label);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.textContent = '×';
+        removeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          schedule = schedule.filter((s) => s.id !== item.id);
+          renderSchedule();
+        });
+        li.appendChild(removeBtn);
+
+        li.addEventListener('click', () => loadScheduleItem(item));
+        scheduleListEl.appendChild(li);
+      });
+    }
+
+    function loadScheduleItem(item) {
+      if (item.type === 'bible') {
+        document.querySelector('.tab-btn[data-tab="bible"]').click();
+        document.getElementById('book').value = item.payload.book;
+        document.getElementById('chapter').value = item.payload.chapter;
+        document.getElementById('verse').value = item.payload.verse;
+        loadChapter();
+      } else if (item.type === 'song') {
+        document.querySelector(`.tab-btn[data-tab="${item.payload.lang}"]`).click();
+        loadSong(item.payload.lang, item.payload.id, item.payload.title, null);
+      }
+    }
+
+    document.getElementById('addToScheduleBtn').addEventListener('click', () => {
+      if (!currentItem) return;
+      schedule.push({ id: ++scheduleSeq, label: currentItem.label, type: currentItem.type, payload: currentItem.payload });
+      renderSchedule();
+    });
+
+    // ---------- Backgrounds ----------
+
+    const bgGallery = document.getElementById('bgGallery');
+    const bgClearThumb = document.getElementById('bgClearThumb');
+    const bgStatus = document.getElementById('bgStatus');
+    let activeBgUrl = null;
+
+    function setLiveMonitorBg(url) {
+      if (url) {
+        liveMonitor.style.backgroundImage = `url(${url})`;
+        liveMonitor.classList.add('has-bg');
+      } else {
+        liveMonitor.style.backgroundImage = '';
+        liveMonitor.classList.remove('has-bg');
+      }
+    }
+
+    function applyBackground(url) {
+      activeBgUrl = url;
+      send({ action: 'SET_BG', url });
+      setLiveMonitorBg(url);
+      renderBgGallery(lastBgList);
+    }
+
+    let lastBgList = [];
+
+    function renderBgGallery(urls) {
+      lastBgList = urls;
+      bgGallery.innerHTML = '';
+      bgGallery.appendChild(bgClearThumb);
+
+      urls.forEach((url) => {
+        const thumb = document.createElement('div');
+        thumb.className = 'bg-thumb' + (url === activeBgUrl ? ' active' : '');
+        thumb.style.backgroundImage = `url(${url})`;
+        thumb.addEventListener('click', () => applyBackground(url));
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'bg-delete-btn';
+        deleteBtn.title = 'Delete background';
+        deleteBtn.textContent = '×';
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteBackground(url);
+        });
+        thumb.appendChild(deleteBtn);
+
+        bgGallery.appendChild(thumb);
+      });
+
+      bgClearThumb.classList.toggle('active', activeBgUrl === null);
+    }
+
+    async function deleteBackground(url) {
+      const filename = url.split('/').pop();
+      const res = await fetch(`/api/backgrounds/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        bgStatus.textContent = data.error || 'Failed to delete background.';
+        return;
+      }
+
+      if (activeBgUrl === url) {
+        activeBgUrl = null;
+        setLiveMonitorBg(null);
+      }
+
+      bgStatus.textContent = 'Background deleted.';
+      await loadBackgrounds();
+    }
+
+    async function loadBackgrounds() {
+      const res = await fetch('/api/backgrounds');
+      const urls = await res.json();
+      renderBgGallery(urls);
+    }
+    loadBackgrounds();
+
+    bgClearThumb.addEventListener('click', () => applyBackground(null));
+
+    document.getElementById('bgUploadBtn').addEventListener('click', async () => {
+      const fileInput = document.getElementById('bgFile');
+      const file = fileInput.files[0];
+      if (!file) {
+        bgStatus.textContent = 'Choose an image file first.';
+        return;
+      }
+
+      bgStatus.textContent = 'Uploading…';
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const res = await fetch('/api/upload-bg', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (!res.ok) {
+        bgStatus.textContent = data.error || 'Upload failed.';
+        return;
+      }
+
+      bgStatus.textContent = 'Uploaded.';
+      await loadBackgrounds();
+      applyBackground(data.url);
+      fileInput.value = '';
     });
   </script>
 </body>

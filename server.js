@@ -4,10 +4,27 @@ const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
 const { WebSocketServer } = require('ws');
+const multer = require('multer');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
+
+const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: UPLOADS_DIR,
+    filename: (req, file, cb) => {
+      cb(null, `bg-${Date.now()}${path.extname(file.originalname)}`);
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    cb(null, file.mimetype.startsWith('image/'));
+  },
+});
 
 const db = new Database(path.join(__dirname, 'bible.sqlite'), { readonly: true });
 
@@ -27,6 +44,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ---------- WebSocket broadcast ----------
 
+let lastBgImage = null;
+
 function broadcast(payload) {
   const data = JSON.stringify(payload);
   wss.clients.forEach((client) => {
@@ -35,6 +54,10 @@ function broadcast(payload) {
 }
 
 wss.on('connection', (ws) => {
+  if (lastBgImage !== null) {
+    ws.send(JSON.stringify({ action: 'SET_BG', url: lastBgImage }));
+  }
+
   ws.on('message', (raw) => {
     let payload;
     try {
@@ -42,8 +65,49 @@ wss.on('connection', (ws) => {
     } catch {
       return;
     }
+    if (payload.action === 'SET_BG') {
+      lastBgImage = payload.url || null;
+    }
     broadcast(payload);
   });
+});
+
+app.post('/api/upload-bg', upload.single('image'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No image uploaded' });
+  }
+  res.json({ url: `/uploads/${req.file.filename}` });
+});
+
+app.get('/api/backgrounds', (req, res) => {
+  const files = fs
+    .readdirSync(UPLOADS_DIR)
+    .filter((f) => /\.(png|jpe?g|gif|webp)$/i.test(f))
+    .sort()
+    .reverse();
+  res.json(files.map((f) => `/uploads/${f}`));
+});
+
+app.delete('/api/backgrounds/:filename', (req, res) => {
+  const filename = path.basename(req.params.filename);
+  if (!/^bg-\d+\.(png|jpe?g|gif|webp)$/i.test(filename)) {
+    return res.status(400).json({ error: 'Invalid filename' });
+  }
+
+  const filePath = path.join(UPLOADS_DIR, filename);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Background not found' });
+  }
+
+  fs.unlinkSync(filePath);
+
+  const deletedUrl = `/uploads/${filename}`;
+  if (lastBgImage === deletedUrl) {
+    lastBgImage = null;
+    broadcast({ action: 'SET_BG', url: null });
+  }
+
+  res.json({ ok: true });
 });
 
 // ---------- Bible API ----------
@@ -105,6 +169,42 @@ app.get('/api/bible', (req, res) => {
     verse: Number(verse),
     english_text: stripTags(englishRaw),
     swahili_text: stripTags(swahiliRaw),
+  });
+});
+
+app.get('/api/bible/chapter', (req, res) => {
+  const { book, chapter } = req.query;
+  if (!book || !chapter) {
+    return res.status(400).json({ error: 'book and chapter are required' });
+  }
+
+  const bookRow = findBook(String(book));
+  if (!bookRow) {
+    return res.status(404).json({ error: `Book "${book}" not found` });
+  }
+
+  const rows = db
+    .prepare(
+      'SELECT position, text FROM texts WHERE chapter_id = ? AND chapter_num = ? ORDER BY position'
+    )
+    .all(bookRow._id, Number(chapter));
+
+  if (!rows.length) {
+    return res.status(404).json({ error: 'Chapter not found' });
+  }
+
+  res.json({
+    book: bookRow.title,
+    book_swahili: ENGLISH_TO_SWAHILI.get(bookRow.title.toLowerCase()) || bookRow.title,
+    chapter: Number(chapter),
+    verses: rows.map((row) => {
+      const [englishRaw, swahiliRaw = ''] = row.text.split('<br/>');
+      return {
+        verse: row.position,
+        english_text: stripTags(englishRaw),
+        swahili_text: stripTags(swahiliRaw),
+      };
+    }),
   });
 });
 

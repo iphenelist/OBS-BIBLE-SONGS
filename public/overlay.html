@@ -14,45 +14,75 @@
     font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   }
 
+  #bg-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  #bg-layer.visible {
+    opacity: 1;
+  }
+
+  #bg-tint {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: rgba(18, 16, 16, 0.664);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  #bg-tint.visible {
+    opacity: 1;
+  }
+
   #banner {
     position: fixed;
-    left: 5%;
-    right: 5%;
-    bottom: 6%;
-    max-width: 90%;
-    padding: 22px 32px;
+    z-index: 1;
+    top: 50%;
+    left: 50%;
+    max-width: 88%;
+    max-height: 86vh;
+    overflow: hidden;
+    padding: 32px 44px;
     border-radius: 10px;
     background: linear-gradient(135deg, rgba(10, 15, 25, 0.72), rgba(10, 15, 25, 0.55));
     border-left: 6px solid #f1c40f;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     opacity: 0;
-    transform: translateY(20px);
+    transform: translate(-50%, calc(-50% + 20px));
     transition: opacity 0.5s ease, transform 0.5s ease;
     backdrop-filter: blur(2px);
   }
 
   #banner.visible {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate(-50%, -50%);
   }
 
   #primary {
-    font-size: 2.4rem;
+    font-size: 4rem;
     font-weight: 700;
     color: #ffffff;
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.65), 0 0 2px rgba(0, 0, 0, 0.5);
     line-height: 1.25;
-    margin: 0 0 8px 0;
+    margin: 0 0 14px 0;
   }
 
   #secondary {
-    font-size: 1.7rem;
+    font-size: 2.6rem;
     font-style: italic;
     font-weight: 600;
     color: #f1c40f;
     text-shadow: 0 2px 5px rgba(0, 0, 0, 0.6);
     line-height: 1.25;
-    margin: 0 0 10px 0;
+    margin: 0 0 14px 0;
   }
 
   #secondary.hidden,
@@ -61,7 +91,7 @@
   }
 
   #reference {
-    font-size: 1rem;
+    font-size: 1.3rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #c9c9c9;
@@ -72,6 +102,8 @@
 </style>
 </head>
 <body>
+  <div id="bg-layer"></div>
+  <div id="bg-tint"></div>
   <div id="banner">
     <p id="primary"></p>
     <p id="secondary"></p>
@@ -80,6 +112,8 @@
 
   <script>
     const banner = document.getElementById('banner');
+    const bgLayer = document.getElementById('bg-layer');
+    const bgTint = document.getElementById('bg-tint');
     const primaryEl = document.getElementById('primary');
     const secondaryEl = document.getElementById('secondary');
     const referenceEl = document.getElementById('reference');
@@ -104,18 +138,44 @@
       ws.addEventListener('error', () => ws.close());
     }
 
+    function scaleForLength(len) {
+      if (len > 480) return 0.4;
+      if (len > 360) return 0.5;
+      if (len > 260) return 0.62;
+      if (len > 180) return 0.75;
+      if (len > 110) return 0.88;
+      return 1;
+    }
+
     function handleMessage(data) {
       if (data.action === 'SHOW') {
-        primaryEl.textContent = data.primary || '';
-        secondaryEl.textContent = data.secondary || '';
+        const primary = data.primary || '';
+        const secondary = data.secondary || '';
+
+        primaryEl.textContent = primary;
+        secondaryEl.textContent = secondary;
         referenceEl.textContent = data.reference || '';
 
-        secondaryEl.classList.toggle('hidden', !data.secondary);
+        secondaryEl.classList.toggle('hidden', !secondary);
         referenceEl.classList.toggle('hidden', !data.reference);
+
+        const scale = scaleForLength(primary.length + secondary.length);
+        primaryEl.style.fontSize = `${4 * scale}rem`;
+        secondaryEl.style.fontSize = `${2.6 * scale}rem`;
 
         banner.classList.add('visible');
       } else if (data.action === 'HIDE') {
         banner.classList.remove('visible');
+      } else if (data.action === 'SET_BG') {
+        if (data.url) {
+          bgLayer.style.backgroundImage = `url(${data.url})`;
+          bgLayer.classList.add('visible');
+          bgTint.classList.add('visible');
+        } else {
+          bgLayer.classList.remove('visible');
+          bgTint.classList.remove('visible');
+          bgLayer.style.backgroundImage = '';
+        }
       }
     }
 
