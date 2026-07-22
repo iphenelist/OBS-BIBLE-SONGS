@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>OBS Overlay</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    overflow: hidden;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  #banner {
+    position: fixed;
+    left: 5%;
+    right: 5%;
+    bottom: 6%;
+    max-width: 90%;
+    padding: 22px 32px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(10, 15, 25, 0.72), rgba(10, 15, 25, 0.55));
+    border-left: 6px solid #f1c40f;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    backdrop-filter: blur(2px);
+  }
+
+  #banner.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  #primary {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.65), 0 0 2px rgba(0, 0, 0, 0.5);
+    line-height: 1.25;
+    margin: 0 0 8px 0;
+  }
+
+  #secondary {
+    font-size: 1.7rem;
+    font-style: italic;
+    font-weight: 600;
+    color: #f1c40f;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.6);
+    line-height: 1.25;
+    margin: 0 0 10px 0;
+  }
+
+  #secondary.hidden,
+  #reference.hidden {
+    display: none;
+  }
+
+  #reference {
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #c9c9c9;
+    text-align: right;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+  <div id="banner">
+    <p id="primary"></p>
+    <p id="secondary"></p>
+    <p id="reference"></p>
+  </div>
+
+  <script>
+    const banner = document.getElementById('banner');
+    const primaryEl = document.getElementById('primary');
+    const secondaryEl = document.getElementById('secondary');
+    const referenceEl = document.getElementById('reference');
+
+    function connect() {
+      const ws = new WebSocket(`ws://${location.host}`);
+
+      ws.addEventListener('message', (event) => {
+        let data;
+        try {
+          data = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+        handleMessage(data);
+      });
+
+      ws.addEventListener('close', () => {
+        setTimeout(connect, 1500);
+      });
+
+      ws.addEventListener('error', () => ws.close());
+    }
+
+    function handleMessage(data) {
+      if (data.action === 'SHOW') {
+        primaryEl.textContent = data.primary || '';
+        secondaryEl.textContent = data.secondary || '';
+        referenceEl.textContent = data.reference || '';
+
+        secondaryEl.classList.toggle('hidden', !data.secondary);
+        referenceEl.classList.toggle('hidden', !data.reference);
+
+        banner.classList.add('visible');
+      } else if (data.action === 'HIDE') {
+        banner.classList.remove('visible');
+      }
+    }
+
+    connect();
+  </script>
+</body>
+</html>
