@@ -230,8 +230,19 @@
     margin-bottom: 10px;
   }
 
-  .row { display: flex; gap: 8px; }
+  .row { display: flex; gap: 8px; align-items: center; }
   .row > div { flex: 1; }
+
+  input[type="color"] {
+    width: 44px;
+    height: 38px;
+    padding: 2px;
+    flex: none;
+    margin-bottom: 0;
+    cursor: pointer;
+  }
+
+  .color-row { margin-top: 10px; }
 
   button {
     cursor: pointer;
@@ -289,6 +300,31 @@
 
   .song-list li:hover { color: var(--accent); }
   .song-list li.active { color: var(--accent); font-weight: 600; }
+
+  .ppt-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .ppt-item .remove-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0 4px;
+  }
+
+  .ppt-item .remove-btn:hover { color: var(--danger); }
+
+  .slide-thumb {
+    width: 100%;
+    border-radius: 6px;
+    display: block;
+    margin-bottom: 4px;
+  }
 
   /* ---------- Preview column ---------- */
 
@@ -367,6 +403,19 @@
     justify-content: center;
   }
 
+  .live-monitor .monitor-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+  }
+
+  .live-monitor .monitor-video.visible {
+    display: block;
+  }
+
   .live-monitor .tint {
     position: absolute;
     inset: 0;
@@ -436,6 +485,14 @@
 
   .bg-thumb:hover { border-color: var(--accent); }
   .bg-thumb.active { border-color: var(--success); }
+
+  .thumb-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 2px;
+    pointer-events: none;
+  }
 
   .bg-delete-btn {
     position: absolute;
@@ -512,6 +569,7 @@
           <button type="button" class="tab-btn active" data-tab="bible">Bible</button>
           <button type="button" class="tab-btn" data-tab="en">Songs EN</button>
           <button type="button" class="tab-btn" data-tab="sw">Songs SW</button>
+          <button type="button" class="tab-btn" data-tab="ppt">PPT</button>
         </div>
 
         <div class="tab-content active" id="tab-bible">
@@ -544,6 +602,14 @@
           <input id="songSearchSw" type="text" placeholder="Filter titles…" />
           <ul class="song-list" id="songListSw"></ul>
         </div>
+
+        <div class="tab-content" id="tab-ppt">
+          <label for="pptFile">Upload presentation (.ppt, .pptx, .odp)</label>
+          <input id="pptFile" type="file" accept=".ppt,.pptx,.odp" />
+          <button type="button" class="btn-nav full-width" id="pptUploadBtn">Upload &amp; Convert</button>
+          <div class="bg-status" id="pptStatus"></div>
+          <ul class="song-list" id="pptList"></ul>
+        </div>
       </div>
     </div>
 
@@ -564,6 +630,7 @@
         <div class="panel-header">Live</div>
         <div class="panel-body">
           <div class="live-monitor" id="liveMonitor">
+            <video id="liveMonitorVideo" class="monitor-video" muted loop playsinline autoplay></video>
             <div class="tint"></div>
             <div class="card" id="liveCard">
               <p class="primary" id="livePrimary"></p>
@@ -576,18 +643,37 @@
         </div>
       </div>
 
-      <div class="panel">
+      <div class="panel panel-spaced">
         <div class="panel-header">Background</div>
         <div class="panel-body">
           <div class="bg-gallery" id="bgGallery">
             <div class="bg-clear-thumb" id="bgClearThumb">None</div>
           </div>
           <div class="upload-row">
-            <label for="bgFile">Upload new background</label>
-            <input id="bgFile" type="file" accept="image/*" />
+            <label for="bgFile">Upload new background (image or video)</label>
+            <input id="bgFile" type="file" accept="image/*,video/*" />
             <button type="button" class="btn-nav full-width" id="bgUploadBtn">Upload &amp; Add</button>
           </div>
+          <div class="color-row">
+            <label for="bgColorPicker">Or use a solid color</label>
+            <div class="row">
+              <input type="color" id="bgColorPicker" value="#101820" />
+              <button type="button" class="btn-nav flex-2" id="bgColorApplyBtn">Use This Color</button>
+            </div>
+          </div>
           <div class="bg-status" id="bgStatus"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">Banner Color</div>
+        <div class="panel-body">
+          <label for="bannerColorPicker">Verse/song card color</label>
+          <div class="row">
+            <input type="color" id="bannerColorPicker" value="#0a0f19" />
+            <button type="button" class="btn-nav flex-2" id="bannerColorApplyBtn">Apply</button>
+          </div>
+          <button type="button" class="btn-nav full-width" id="bannerColorResetBtn">Reset to Default</button>
         </div>
       </div>
     </div>
@@ -674,19 +760,25 @@
         const label = document.createElement('div');
         label.className = 'slide-label';
         label.textContent = slide.label;
-
-        const primary = document.createElement('div');
-        primary.className = 'slide-primary';
-        primary.textContent = slide.primary;
-
         card.appendChild(label);
-        card.appendChild(primary);
 
-        if (slide.secondary) {
-          const secondary = document.createElement('div');
-          secondary.className = 'slide-secondary';
-          secondary.textContent = slide.secondary;
-          card.appendChild(secondary);
+        if (slide.isImage) {
+          const img = document.createElement('img');
+          img.className = 'slide-thumb';
+          img.src = slide.imageUrl;
+          card.appendChild(img);
+        } else {
+          const primary = document.createElement('div');
+          primary.className = 'slide-primary';
+          primary.textContent = slide.primary;
+          card.appendChild(primary);
+
+          if (slide.secondary) {
+            const secondary = document.createElement('div');
+            secondary.className = 'slide-secondary';
+            secondary.textContent = slide.secondary;
+            card.appendChild(secondary);
+          }
         }
 
         card.addEventListener('click', () => selectSlide(idx));
@@ -715,8 +807,16 @@
       const slide = slides[selectedIndex];
       if (!slide) return;
 
-      send({ action: 'SHOW', primary: slide.primary, secondary: slide.secondary || '', reference: slide.reference || '' });
       isLive = true;
+
+      if (slide.isImage) {
+        applyBackground(slide.imageUrl);
+        send({ action: 'HIDE' });
+        liveCard.classList.remove('visible');
+        return;
+      }
+
+      send({ action: 'SHOW', primary: slide.primary, secondary: slide.secondary || '', reference: slide.reference || '' });
 
       livePrimaryEl.textContent = slide.primary;
       liveSecondaryEl.textContent = slide.secondary || '';
@@ -888,6 +988,100 @@
     loadSongList('en');
     loadSongList('sw');
 
+    // ---------- Presentations (PPT) ----------
+
+    const pptListEl = document.getElementById('pptList');
+    const pptStatus = document.getElementById('pptStatus');
+
+    async function loadPresentationList() {
+      const res = await fetch('/api/presentations');
+      const presentations = await res.json();
+      renderPresentationList(presentations);
+    }
+
+    function renderPresentationList(presentations) {
+      pptListEl.innerHTML = '';
+      if (presentations.length === 0) {
+        pptListEl.innerHTML = '<li class="schedule-empty">No presentations uploaded yet.</li>';
+        return;
+      }
+      presentations.forEach((p) => {
+        const li = document.createElement('li');
+        li.className = 'ppt-item';
+
+        const label = document.createElement('span');
+        label.textContent = `${p.name} (${p.slideCount} slides)`;
+        label.addEventListener('click', () => loadPresentation(p.id, p.name));
+        li.appendChild(label);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.textContent = '×';
+        removeBtn.title = 'Delete presentation';
+        removeBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          await fetch(`/api/presentations/${encodeURIComponent(p.id)}`, { method: 'DELETE' });
+          loadPresentationList();
+        });
+        li.appendChild(removeBtn);
+
+        pptListEl.appendChild(li);
+      });
+    }
+
+    async function loadPresentation(id, name) {
+      const res = await fetch(`/api/presentations/${encodeURIComponent(id)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      slides = data.slides.map((url, idx) => ({
+        label: `Slide ${idx + 1}`,
+        isImage: true,
+        imageUrl: url,
+        reference: `${data.name.toUpperCase()} - SLIDE ${idx + 1}`,
+      }));
+      selectedIndex = slides.length ? 0 : -1;
+
+      buildScheduleItem = (idx) => ({
+        label: `${data.name} - Slide ${idx + 1}`,
+        type: 'ppt',
+        payload: { id, slideIndex: idx },
+      });
+
+      renderSlides(data.name);
+      currentItem = slides.length ? buildScheduleItem(selectedIndex) : null;
+
+      if (isLive) pushLive();
+    }
+
+    document.getElementById('pptUploadBtn').addEventListener('click', async () => {
+      const fileInput = document.getElementById('pptFile');
+      const file = fileInput.files[0];
+      if (!file) {
+        pptStatus.textContent = 'Choose a .ppt/.pptx/.odp file first.';
+        return;
+      }
+
+      pptStatus.textContent = 'Converting… this can take a few seconds.';
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/presentations', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (!res.ok) {
+        pptStatus.textContent = data.error || 'Conversion failed.';
+        return;
+      }
+
+      pptStatus.textContent = `Converted "${data.name}" (${data.slides.length} slides).`;
+      fileInput.value = '';
+      await loadPresentationList();
+      loadPresentation(data.id, data.name);
+    });
+
+    loadPresentationList();
+
     // ---------- Schedule ----------
 
     let schedule = [];
@@ -923,7 +1117,7 @@
       });
     }
 
-    function loadScheduleItem(item) {
+    async function loadScheduleItem(item) {
       if (item.type === 'bible') {
         document.querySelector('.tab-btn[data-tab="bible"]').click();
         document.getElementById('book').value = item.payload.book;
@@ -933,6 +1127,10 @@
       } else if (item.type === 'song') {
         document.querySelector(`.tab-btn[data-tab="${item.payload.lang}"]`).click();
         loadSong(item.payload.lang, item.payload.id, item.payload.title, null);
+      } else if (item.type === 'ppt') {
+        document.querySelector('.tab-btn[data-tab="ppt"]').click();
+        await loadPresentation(item.payload.id, item.label);
+        if (item.payload.slideIndex < slides.length) selectSlide(item.payload.slideIndex);
       }
     }
 
@@ -947,14 +1145,41 @@
     const bgGallery = document.getElementById('bgGallery');
     const bgClearThumb = document.getElementById('bgClearThumb');
     const bgStatus = document.getElementById('bgStatus');
+    const liveMonitorVideo = document.getElementById('liveMonitorVideo');
     let activeBgUrl = null;
 
-    function setLiveMonitorBg(url) {
-      if (url) {
+    const VIDEO_EXT_RE = /\.(mp4|webm|mov|m4v)$/i;
+
+    function setLiveMonitorBg(url, color) {
+      if (color) {
+        liveMonitorVideo.pause();
+        liveMonitorVideo.removeAttribute('src');
+        liveMonitorVideo.classList.remove('visible');
+        liveMonitor.style.backgroundImage = '';
+        liveMonitor.style.backgroundColor = color;
+        liveMonitor.classList.remove('has-bg');
+      } else if (url && VIDEO_EXT_RE.test(url)) {
+        liveMonitor.style.backgroundColor = '';
+        liveMonitor.style.backgroundImage = '';
+        if (liveMonitorVideo.getAttribute('src') !== url) {
+          liveMonitorVideo.src = url;
+        }
+        liveMonitorVideo.play().catch(() => {});
+        liveMonitorVideo.classList.add('visible');
+        liveMonitor.classList.add('has-bg');
+      } else if (url) {
+        liveMonitorVideo.pause();
+        liveMonitorVideo.removeAttribute('src');
+        liveMonitorVideo.classList.remove('visible');
+        liveMonitor.style.backgroundColor = '';
         liveMonitor.style.backgroundImage = `url(${url})`;
         liveMonitor.classList.add('has-bg');
       } else {
+        liveMonitorVideo.pause();
+        liveMonitorVideo.removeAttribute('src');
+        liveMonitorVideo.classList.remove('visible');
         liveMonitor.style.backgroundImage = '';
+        liveMonitor.style.backgroundColor = '';
         liveMonitor.classList.remove('has-bg');
       }
     }
@@ -962,7 +1187,14 @@
     function applyBackground(url) {
       activeBgUrl = url;
       send({ action: 'SET_BG', url });
-      setLiveMonitorBg(url);
+      setLiveMonitorBg(url, null);
+      renderBgGallery(lastBgList);
+    }
+
+    function applyBackgroundColor(color) {
+      activeBgUrl = null;
+      send({ action: 'SET_BG', color });
+      setLiveMonitorBg(null, color);
       renderBgGallery(lastBgList);
     }
 
@@ -976,7 +1208,20 @@
       urls.forEach((url) => {
         const thumb = document.createElement('div');
         thumb.className = 'bg-thumb' + (url === activeBgUrl ? ' active' : '');
-        thumb.style.backgroundImage = `url(${url})`;
+
+        if (VIDEO_EXT_RE.test(url)) {
+          const video = document.createElement('video');
+          video.src = url;
+          video.muted = true;
+          video.loop = true;
+          video.autoplay = true;
+          video.playsInline = true;
+          video.className = 'thumb-video';
+          thumb.appendChild(video);
+        } else {
+          thumb.style.backgroundImage = `url(${url})`;
+        }
+
         thumb.addEventListener('click', () => applyBackground(url));
 
         const deleteBtn = document.createElement('button');
@@ -1007,7 +1252,7 @@
 
       if (activeBgUrl === url) {
         activeBgUrl = null;
-        setLiveMonitorBg(null);
+        setLiveMonitorBg(null, null);
       }
 
       bgStatus.textContent = 'Background deleted.';
@@ -1047,6 +1292,41 @@
       await loadBackgrounds();
       applyBackground(data.url);
       fileInput.value = '';
+    });
+
+    document.getElementById('bgColorApplyBtn').addEventListener('click', () => {
+      applyBackgroundColor(document.getElementById('bgColorPicker').value);
+      bgStatus.textContent = 'Solid background color applied.';
+    });
+
+    // ---------- Banner color ----------
+
+    const bannerStatus = { current: null };
+
+    function hexToRgba(hex, alpha) {
+      const clean = hex.replace('#', '');
+      const r = parseInt(clean.substring(0, 2), 16);
+      const g = parseInt(clean.substring(2, 4), 16);
+      const b = parseInt(clean.substring(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function applyBannerColor(color) {
+      bannerStatus.current = color;
+      send({ action: 'SET_BANNER_COLOR', color });
+      if (color) {
+        liveCard.style.background = `linear-gradient(135deg, ${hexToRgba(color, 0.78)}, ${hexToRgba(color, 0.6)})`;
+      } else {
+        liveCard.style.background = '';
+      }
+    }
+
+    document.getElementById('bannerColorApplyBtn').addEventListener('click', () => {
+      applyBannerColor(document.getElementById('bannerColorPicker').value);
+    });
+
+    document.getElementById('bannerColorResetBtn').addEventListener('click', () => {
+      applyBannerColor(null);
     });
   </script>
 </body>

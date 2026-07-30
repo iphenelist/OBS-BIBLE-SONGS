@@ -2,9 +2,13 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
 const Database = require('better-sqlite3');
 const { WebSocketServer } = require('ws');
 const multer = require('multer');
+
+const execFileAsync = promisify(execFile);
 
 const app = express();
 const server = http.createServer(app);
@@ -20,9 +24,29 @@ const upload = multer({
       cb(null, `bg-${Date.now()}${path.extname(file.originalname)}`);
     },
   }),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 200 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    cb(null, file.mimetype.startsWith('image/'));
+    cb(null, file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/'));
+  },
+});
+
+const BG_EXT_RE = /\.(png|jpe?g|gif|webp|mp4|webm|mov|m4v)$/i;
+
+const PPT_STAGING_DIR = path.join(UPLOADS_DIR, 'ppt-staging');
+const PRESENTATIONS_DIR = path.join(__dirname, 'public', 'presentations');
+fs.mkdirSync(PPT_STAGING_DIR, { recursive: true });
+fs.mkdirSync(PRESENTATIONS_DIR, { recursive: true });
+
+const pptUpload = multer({
+  storage: multer.diskStorage({
+    destination: PPT_STAGING_DIR,
+    filename: (req, file, cb) => {
+      cb(null, `ppt-${Date.now()}${path.extname(file.originalname)}`);
+    },
+  }),
+  limits: { fileSize: 200 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    cb(null, /\.(pptx?|odp)$/i.test(file.originalname));
   },
 });
 
@@ -45,6 +69,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ---------- WebSocket broadcast ----------
 
 let lastBgImage = null;
+let lastBgColor = null;
+let lastBannerColor = null;
 
 function broadcast(payload) {
   const data = JSON.stringify(payload);
@@ -54,8 +80,13 @@ function broadcast(payload) {
 }
 
 wss.on('connection', (ws) => {
-  if (lastBgImage !== null) {
+  if (lastBgColor !== null) {
+    ws.send(JSON.stringify({ action: 'SET_BG', color: lastBgColor }));
+  } else if (lastBgImage !== null) {
     ws.send(JSON.stringify({ action: 'SET_BG', url: lastBgImage }));
+  }
+  if (lastBannerColor !== null) {
+    ws.send(JSON.stringify({ action: 'SET_BANNER_COLOR', color: lastBannerColor }));
   }
 
   ws.on('message', (raw) => {
@@ -66,7 +97,18 @@ wss.on('connection', (ws) => {
       return;
     }
     if (payload.action === 'SET_BG') {
-      lastBgImage = payload.url || null;
+      if (payload.color) {
+        lastBgColor = payload.color;
+        lastBgImage = null;
+      } else if (payload.url) {
+        lastBgImage = payload.url;
+        lastBgColor = null;
+      } else {
+        lastBgImage = null;
+        lastBgColor = null;
+      }
+    } else if (payload.action === 'SET_BANNER_COLOR') {
+      lastBannerColor = payload.color || null;
     }
     broadcast(payload);
   });
@@ -82,7 +124,7 @@ app.post('/api/upload-bg', upload.single('image'), (req, res) => {
 app.get('/api/backgrounds', (req, res) => {
   const files = fs
     .readdirSync(UPLOADS_DIR)
-    .filter((f) => /\.(png|jpe?g|gif|webp)$/i.test(f))
+    .filter((f) => BG_EXT_RE.test(f))
     .sort()
     .reverse();
   res.json(files.map((f) => `/uploads/${f}`));
@@ -90,7 +132,7 @@ app.get('/api/backgrounds', (req, res) => {
 
 app.delete('/api/backgrounds/:filename', (req, res) => {
   const filename = path.basename(req.params.filename);
-  if (!/^bg-\d+\.(png|jpe?g|gif|webp)$/i.test(filename)) {
+  if (!/^bg-\d+\.(png|jpe?g|gif|webp|mp4|webm|mov|m4v)$/i.test(filename)) {
     return res.status(400).json({ error: 'Invalid filename' });
   }
 
@@ -107,6 +149,116 @@ app.delete('/api/backgrounds/:filename', (req, res) => {
     broadcast({ action: 'SET_BG', url: null });
   }
 
+  res.json({ ok: true });
+});
+
+// ---------- Presentations (PPT/PPTX -> slide images) ----------
+
+function presentationMetaPath(id) {
+  return path.join(PRESENTATIONS_DIR, id, 'meta.json');
+}
+
+function listSlideFiles(id) {
+  const dir = path.join(PRESENTATIONS_DIR, id);
+  return fs
+    .readdirSync(dir)
+    .filter((f) => /^slide-\d+\.png$/.test(f))
+    .sort((a, b) => {
+      const numA = parseInt(a.match(/\d+/)[0], 10);
+      const numB = parseInt(b.match(/\d+/)[0], 10);
+      return numA - numB;
+    });
+}
+
+app.post('/api/presentations', pptUpload.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No presentation file uploaded (.ppt, .pptx, .odp)' });
+  }
+
+  const id = path.basename(req.file.filename, path.extname(req.file.filename));
+  const outputDir = path.join(PRESENTATIONS_DIR, id);
+  fs.mkdirSync(outputDir, { recursive: true });
+
+  try {
+    await execFileAsync('soffice', [
+      '--headless',
+      '--convert-to', 'pdf',
+      '--outdir', outputDir,
+      req.file.path,
+    ]);
+
+    const pdfPath = path.join(outputDir, `${id}.pdf`);
+    if (!fs.existsSync(pdfPath)) {
+      throw new Error('PDF conversion did not produce output');
+    }
+
+    await execFileAsync('pdftoppm', ['-png', '-r', '100', pdfPath, path.join(outputDir, 'slide')]);
+
+    fs.unlinkSync(pdfPath);
+    fs.unlinkSync(req.file.path);
+
+    const slideFiles = listSlideFiles(id);
+    if (!slideFiles.length) {
+      throw new Error('No slides were produced');
+    }
+
+    const meta = { name: req.file.originalname, slideCount: slideFiles.length };
+    fs.writeFileSync(presentationMetaPath(id), JSON.stringify(meta));
+
+    res.json({
+      id,
+      name: meta.name,
+      slides: slideFiles.map((f) => `/presentations/${id}/${f}`),
+    });
+  } catch (err) {
+    fs.rmSync(outputDir, { recursive: true, force: true });
+    fs.rmSync(req.file.path, { force: true });
+    console.error('Presentation conversion failed:', err.message);
+    res.status(500).json({ error: 'Failed to convert presentation. Is LibreOffice installed?' });
+  }
+});
+
+app.get('/api/presentations', (req, res) => {
+  const ids = fs.readdirSync(PRESENTATIONS_DIR).filter((f) =>
+    fs.statSync(path.join(PRESENTATIONS_DIR, f)).isDirectory()
+  );
+
+  const presentations = ids
+    .map((id) => {
+      const metaPath = presentationMetaPath(id);
+      if (!fs.existsSync(metaPath)) return null;
+      const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+      return { id, name: meta.name, slideCount: meta.slideCount };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.id.localeCompare(a.id));
+
+  res.json(presentations);
+});
+
+app.get('/api/presentations/:id', (req, res) => {
+  const id = path.basename(req.params.id);
+  const dir = path.join(PRESENTATIONS_DIR, id);
+  const metaPath = presentationMetaPath(id);
+
+  if (!fs.existsSync(metaPath)) {
+    return res.status(404).json({ error: 'Presentation not found' });
+  }
+
+  const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+  const slides = listSlideFiles(id).map((f) => `/presentations/${id}/${f}`);
+  res.json({ id, name: meta.name, slides });
+});
+
+app.delete('/api/presentations/:id', (req, res) => {
+  const id = path.basename(req.params.id);
+  const dir = path.join(PRESENTATIONS_DIR, id);
+
+  if (!fs.existsSync(dir)) {
+    return res.status(404).json({ error: 'Presentation not found' });
+  }
+
+  fs.rmSync(dir, { recursive: true, force: true });
   res.json({ ok: true });
 });
 
